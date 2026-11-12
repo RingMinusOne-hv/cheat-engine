@@ -605,7 +605,7 @@ end;
 procedure TTuringHVMenu.StartupTimer(Sender: TObject);
 begin
   TTimer(Sender).Enabled:=false;
-  TuringHV_EnableFromUI(false);
+  TuringHV_EnableFromUI(THV_STARTUP_DEFAULT); //Turing Explorer: say so when it could not start (else processes open through Windows)
   if not TuringHV_Active then
     TuringHV_Log('could not enable the Turing-HV backend at startup (Turing-HV > Status for details)');
   TTimer(Sender).Free;
@@ -688,7 +688,7 @@ begin
     root.Add(miShared);
     sep:=TMenuItem.Create(mf); sep.Caption:='-'; root.Add(sep);
     miStartup:=newItem(mf, 'Turn the backend on when Cheat Engine starts', OptionClick);
-    miStartup.Checked:=cereg.readBool(REG_ENABLED, false);
+    miStartup.Checked:=cereg.readBool(REG_ENABLED, THV_STARTUP_DEFAULT);
     root.Add(miStartup);
 
     //before Help

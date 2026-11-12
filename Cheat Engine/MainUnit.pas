@@ -8528,7 +8528,12 @@ begin
     end;
 
 
+    {$ifndef TURING_EXPLORER} //Turing-HV: the Turing Explorer build ships no tutorial
     if messagedlg(rsTryTutorial, mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    {$endif}
+    {$ifdef TURING_EXPLORER}
+    if false then
+    {$endif}
     {$ifdef darwin}
       miTutorial64.click;
     {$else}

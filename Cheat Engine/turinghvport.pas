@@ -94,6 +94,11 @@ type
     function Alive(maxage: dword; forWrite: boolean): boolean;
   end;
 
+const
+  { The Turing Explorer build (-dTURING_EXPLORER, turinghv\build_turing_explorer.ps1) starts with the backend on unless
+    the user turned that off: before it is on, a process opens through Windows (a handle the game can see). }
+  THV_STARTUP_DEFAULT = {$ifdef TURING_EXPLORER}true{$else}false{$endif};
+
 var
   thvOptOSHandle: boolean=true;          //ask Windows for a limited query handle for compatibility
   thvOptOSFallback: boolean=false;       //alloc/free/protect/remote thread through Windows when it allows

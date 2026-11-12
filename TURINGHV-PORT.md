@@ -13,6 +13,7 @@ Contents:
 5. **[What the hypervisor is missing (for you to look at)](#5-what-the-hypervisor-is-missing)**
 6. [Files](#6-files)
 7. [Tests](#7-tests)
+8. [Turing Explorer: the build without Cheat Engine's traces](#8-turing-explorer-the-build-without-cheat-engines-traces)
 
 ---
 
@@ -621,3 +622,103 @@ INTEGRITY 0. The 3 failures are step positions -- the hypervisor bug rev150b fix
 by Hyper-V was reported as a new stop where it started, and an interrupt in flight let the thread run on). The register
 edit is RDX now: the test used to set RBX, which is the caller's timing-loop counter (`cmp rbx, 2000; jne`) -- the
 target's main thread then looped for ever and never called `cold_target` again (the earlier rev150 run's "failures").
+
+## 8. Turing Explorer: the build without Cheat Engine's traces
+
+`Cheat Engine\turinghv\build_turing_explorer.ps1` builds the same program (with the Turing-HV backend) as
+**Turing Explorer**. It is a ready-to-run folder with no Cheat Engine name or vocabulary in anything it ships. The
+repository is not rebranded: `turinghv\rebrand\rebrand.py` rewrites a copy.
+
+```
+powershell -ExecutionPolicy Bypass -File "Cheat Engine\turinghv\build_turing_explorer.ps1"
+   -> C:\projs\turing-explorer\turing-explorer.exe     (the folder to run from; -Dist to change it)
+      C:\projs\turing-explorer-build\                  (the rebranded copy of the source, its build log, the .dbg)
+```
+
+It takes about 6 minutes (a clean build). Run `turing-explorer.exe` as administrator. The backend turns on by itself
+(`-dTURING_EXPLORER`), and an error box says so if it can't. Neither folder may have "cheat" in its path; the script
+refuses one that does.
+
+**The broker.** `te-broker.exe` is `bin\thvbridge.exe`, copied. The hypervisor trusts a program by its measured code
+pages, not by its name or folder (`vm_ctl_gate.c`), so the copy keeps the trust. Only its help text is patched (same
+length, outside the executable sections). The build ends with `te-broker.exe --selftest`. After you rebuild and re-trust
+`thvbridge.exe`, run the script again.
+
+### 8.1 What changes
+
+| Where | What other programs saw before | Now |
+|---|---|---|
+| Process | `cheatengine-x86_64.exe` in `...\Cheat Engine\bin\`, child `thvbridge.exe` | `turing-explorer.exe`, child `te-broker.exe` |
+| Windows | "Cheat Engine 7.5", "Cheat Engine settings", "Lua script: Cheat Table", ... | "Turing Explorer", "Turing Explorer settings", "Lua script: Code Table" (the LCL window class is the generic `Window`) |
+| Version info / manifest | Cheat Engine 7.5 | Turing / Turing Explorer 1.0, `turing-explorer.exe` |
+| Program icon, logos | Cheat Engine's, blue | **Cheat Engine's, turned purple** (your choice). This covers the exe's icon, every window's icon and the tray, the logo on the main form and in the about box, and the bigger logo the main form loads on a high-DPI screen (`IMAGES_CELOGO` in `Images.res`). The logo bitmap still has "Cheat Engine" drawn in it, as pixels, not text. `build_turing_explorer.ps1 -Art ce` keeps the blue originals; `-Art mark` uses a generated mark instead. |
+| Registry | `HKCU\Software\Cheat Engine` | `HKCU\Software\Turing Explorer` (a fresh settings profile) |
+| Temp folders | `%TEMP%\Cheat Engine\`, `Cheat Engine Symbols` | `%TEMP%\Turing Explorer\`, `Turing Explorer Symbols` |
+| The exe's bytes | ~1700 "Cheat Engine" strings, plus unit, class, form, component, event and resource-string names | None. `rebrand.py scan` checks every shipped file (ASCII and UTF-16, any case) |
+| Shipped DLLs | `lua53-64.dll` / `lfs.dll` signed by "Cheat Engine", with `D:\git\cheat-engine\...` PDB paths | Signature removed, PDB paths cut to the file name (code untouched) |
+| Network | The autorun update check and table sharing call cheatengine.org | Not shipped. Every link points to `turing-explorer.invalid`, a reserved name nothing answers. This includes the about box's Patreon link: renamed, it would have led to whoever owns that name on Patreon |
+
+The vocabulary is renamed everywhere it ends up in the binary: identifiers, file and folder names, and text. This
+covers Cheat Engine's name and its own words: `dbk` (driver), `dbvm`, `ultimap`, `speedhack`, `d3dhook`, `vehdebug`,
+`celua`, `ceserver`, `cetrainer`, `cepack`, `thvbridge`. In the UI, "Speedhack" reads "Timewarp", DBVM reads HVMX,
+and Ultimap reads Tracemap.
+
+Names other code relies on keep their **value**. In code they are rebuilt from pieces at run time, so the word is not
+in the file:
+- Lua function names: `getCheatEngineDir`, `dbk_getCR3`, `speedhack_setSpeed`, ...;
+- the table format: `CheatEngineTableVersion`, the `CHEATENGINE` magic;
+- registry value names;
+- exports looked up in the injectable DLLs.
+
+So existing tables and scripts keep working. Identifiers that Lazarus/FPC declare are never renamed.
+`<stage>\rebrand-constants.txt` lists the few such names that had to stay constants.
+
+### 8.2 What is left out, and why
+
+- **The scripts of features that can't work with the hypervisor backend:**
+  - `ultimap2.lua` (kernel driver);
+  - `SpeedhackV3.lua`, `luahook.lua`, `monoscript.lua`, `java*.lua` (inject into the game);
+  - `andtools` (Android ceserver);
+  - `versioncheck.lua`, `ceshare` (call home).
+- **The injectable DLLs** (speedhack, VEH debugger, D3D hook, Lua client, mono/.NET collectors), the driver, the
+  tutorial and the translations. The first-run "try the tutorial?" question is skipped.
+
+### 8.3 What is still there (and what would remove it)
+
+- **Memory.** The Lua function names above are real strings in the program's memory once its Lua engine starts.
+  Renaming the Lua API would break every table that calls `getCheatEngineDir()` or `speedhack_setSpeed()`.
+  `te_runtime_check.ps1` (below) shows them.
+- **Code.** Renaming changes names, not the machine code. The scanner, disassembler, Lua and LCL compile to the
+  same instruction sequences as any Cheat Engine 7.5 built with FPC 3.2.2. A byte-pattern signature of that code
+  would still match. Changing it means changing the compiler output (other optimisation settings or compiler
+  version), or hiding the process's memory from other readers in the hypervisor (§5.11, cloaking). The hypervisor
+  is the layer that can do that.
+- **Component names are renamed** (`cbSpeedhack` is now `cbTimewarp`). An old table that reaches into a form by
+  such a name (`getMainForm().cbSpeedhack`) won't find it. Lua functions, table keys and `.CETRAINER` files are not
+  affected: they keep their values.
+- **`turinghv.dll`** keeps its name: the broker imports it, and it is the hypervisor's own SDK.
+- **The query-only handle.** With *Also open a query-only Windows handle* on (the default), Turing Explorer holds a
+  `PROCESS_QUERY_LIMITED_INFORMATION | SYNCHRONIZE` handle to the game. That is visible to handle enumeration. Turn
+  it off for none at all. Without the handle, a write's liveness check can't pin the process (§4).
+- **Your machine.** Your installed Cheat Engine keeps `HKCU\Software\Cheat Engine` and `%TEMP%\Cheat Engine*`.
+  Turing Explorer doesn't touch them, but they are there.
+
+### 8.4 Checks (2026-11-06)
+
+- `rebrand.py scan` over `C:\projs\turing-explorer`: **0 hits** in all 143 files.
+- `turinghv\tests\run_tests.ps1 -Bin C:\projs\turing-explorer -Exe turing-explorer.exe`: **105 passed, 0 failed**.
+- `turinghv\tests\run_debugger_test.ps1 -Bin C:\projs\turing-explorer -Exe turing-explorer.exe`: **44 passed, 0
+  failed**. The anti-debug lab target saw `DEBUGGER=0 INTEGRITY=0`.
+  - `debugger_process` (it lists `thvbridge.exe`) no longer fires.
+  - `debugger_window` fired only on two terminal windows with "Cheat Engine" in their titles.
+  - The two TIMING hits are the test parking the target's thread at breakpoints.
+- `turinghv\tests\te_runtime_check.ps1` starts the program and lists what another program can see:
+  - its windows (hidden and message-only too), modules, and named kernel objects;
+  - the registry and temp entries it made;
+  - the old words in its memory and the broker's.
+
+  Only the Lua function names showed up. The other memory hits were not the app's: the starting shell's current
+  directory (inherited environment), shell-mapped data about the user's own files, and Windows DLLs.
+
+**Licence.** This is a private build. The source keeps every upstream notice (comments are never rewritten). If you
+distribute the binary, ship Cheat Engine's licence and attribution with it.

@@ -830,9 +830,11 @@ int main(int argc, char **argv) {
             return serve((HANDLE)(uintptr_t)h);
         }
     }
-    printf("%s -- Cheat Engine's bridge to turing-hv.\n"
+    /* 2026-11-06: no product name in the binary (the Turing Explorer build ships this file as it is; rebrand.py
+       patches the same-length text into the already-trusted build) */
+    printf("%s -- the explorer's bridge to turing-hv.\n"
            "  thvbridge --selftest    check that the hypervisor serves this program (run as administrator)\n"
            "  thvbridge --version\n"
-           "Cheat Engine starts it by itself (--section <handle>).\n", THVB_VERSION);
+           "the explorer starts it by itself (--section <handle>).\n", THVB_VERSION);
     return 2;
 }

@@ -14,10 +14,11 @@
 #>
 param([string]$Work = (Join-Path $env:TEMP 'thvdbgtest'),
       [string]$Exe = 'cheatengine-x86_64-thv.exe',
-      [string]$Target = 'C:\projs\antidebug-lab\target\adbg_target.exe')
+      [string]$Target = 'C:\projs\antidebug-lab\target\adbg_target.exe',
+      [string]$Bin = '')    # another build, e.g. -Bin C:\projs\turing-explorer -Exe turing-explorer.exe
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
-$bin = (Resolve-Path (Join-Path $here '..\..\bin')).Path
+$bin = if ($Bin) { (Resolve-Path $Bin).Path } else { (Resolve-Path (Join-Path $here '..\..\bin')).Path }
 Remove-Item $Work -Recurse -Force -ErrorAction SilentlyContinue
 New-Item -ItemType Directory -Force $Work | Out-Null
 

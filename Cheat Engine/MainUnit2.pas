@@ -1058,7 +1058,7 @@ begin
 
           {Turing-HV: when the hypervisor backend starts with Cheat Engine it replaces the kernel driver's
            read/write/open/query; loading the driver as well would only ask for a driver this build may not have}
-          if (skipkernelapply=false) and (TuringHV_Active or cereg.readBool('TuringHV.EnableAtStartup', false)) then
+          if (skipkernelapply=false) and (TuringHV_Active or cereg.readBool('TuringHV.EnableAtStartup', THV_STARTUP_DEFAULT)) then
           begin
             if cbKernelQueryMemoryRegion.checked or cbKernelReadWriteProcessMemory.checked or cbKernelOpenProcess.Checked then
               TuringHV_Log('the kernel-mode (DBK) settings are not applied: the Turing-HV backend provides open/read/write/query');

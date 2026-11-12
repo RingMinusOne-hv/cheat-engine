@@ -12,10 +12,11 @@
 
         powershell -ExecutionPolicy Bypass -File "Cheat Engine\turinghv\tests\run_tests.ps1"
 #>
-param([string]$Work = (Join-Path $env:TEMP 'thvtest'), [string]$Exe = 'cheatengine-x86_64.exe')
+# -Bin / -Exe: another build, e.g. Turing Explorer: -Bin C:\projs\turing-explorer -Exe turing-explorer.exe
+param([string]$Work = (Join-Path $env:TEMP 'thvtest'), [string]$Exe = 'cheatengine-x86_64.exe', [string]$Bin = '')
 $ErrorActionPreference = 'Stop'
 $here = $PSScriptRoot
-$bin = (Resolve-Path (Join-Path $here '..\..\bin')).Path
+$bin = if ($Bin) { (Resolve-Path $Bin).Path } else { (Resolve-Path (Join-Path $here '..\..\bin')).Path }
 New-Item -ItemType Directory -Force $Work | Out-Null
 
 function Import-VsEnv($bat) {
