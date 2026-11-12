@@ -254,6 +254,12 @@ begin
       end;
       ask:=false;   //the question was the confirmation
     end;
+    //Turing-HV (audit row 34): OFF the main thread -- a Lua thread, a plugin, a timer -- there is no one to ask, and the
+    //question above is skipped. Cheat Engine's (visible) debugger must never attach to a hypervisor-opened process
+    //without the user's choice: refuse until "Turing-HV debugger" is remembered (Settings > Debugger Options) or the
+    //breakpoint is set from the main thread, where the question is asked.
+    if TuringHV_IsHVHandle(processhandle) and not thvDbgUseHV and (MainThreadID<>GetCurrentThreadId) then
+      exit(false);
     {$endif}
 
     if ask then
